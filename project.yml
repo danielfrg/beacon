@@ -43,6 +43,18 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: com.example.BeaconTests
+  BeaconUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - BeaconUITests
+    dependencies:
+      - target: Beacon
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.BeaconUITests
+        TEST_TARGET_NAME: Beacon
 schemes:
   Beacon:
     build:
@@ -52,3 +64,11 @@ schemes:
     test:
       targets:
         - BeaconTests
+  BeaconUI:
+    build:
+      targets:
+        Beacon: all
+        BeaconUITests: [test]
+    test:
+      targets:
+        - BeaconUITests

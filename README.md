@@ -29,3 +29,13 @@ Launch the app pointed at a server without typing the URL (simulator):
 ```sh
 xcrun simctl launch booted com.example.Beacon -serverURL http://127.0.0.1:5000
 ```
+
+## UI tests
+
+End-to-end flows run against the mock server (start it first):
+
+```sh
+python3 tools/mock-frigate/server.py &
+xcodebuild test -project Beacon.xcodeproj -scheme BeaconUI \
+  -destination 'platform=iOS Simulator,name=iPhone 17'
+```

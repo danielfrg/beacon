@@ -6,6 +6,17 @@ enum FrigateError: Error, Equatable {
     case invalidResponse
 }
 
+extension FrigateError {
+    /// Plain-language description for showing to the user.
+    static func userMessage(for error: Error) -> String {
+        switch error as? FrigateError {
+        case .unreachable: "Can't reach the server. Check the address and that you're on the same network."
+        case .badStatus(let code): "The server answered with an error (\(code))."
+        default: "The server's response couldn't be read. Is this a Frigate server?"
+        }
+    }
+}
+
 struct FrigateAPI {
     let baseURL: URL
     var session: URLSession = .shared

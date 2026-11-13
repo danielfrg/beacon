@@ -36,7 +36,7 @@ final class CamerasModel {
             cameras = try await api.fetchCameras()
             state = .loaded
         } catch {
-            state = .failed(Self.message(for: error))
+            state = .failed(FrigateError.userMessage(for: error))
         }
     }
 
@@ -46,13 +46,5 @@ final class CamerasModel {
 
     func setHidden(_ name: String, _ hidden: Bool) {
         preferences?.setHidden(name, hidden)
-    }
-
-    private static func message(for error: Error) -> String {
-        switch error as? FrigateError {
-        case .unreachable: "Can't reach the server. Check the address and that you're on the same network."
-        case .badStatus(let code): "The server answered with an error (\(code))."
-        default: "The server's response couldn't be read. Is this a Frigate server?"
-        }
     }
 }

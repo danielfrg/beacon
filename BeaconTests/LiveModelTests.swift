@@ -54,6 +54,18 @@ final class LiveModelTests: XCTestCase {
         model.stop()
     }
 
+    func testSuccessfulConnectionIsNotTornDown() async {
+        // Regression: the cancelled timeout timer used to call disconnect() on the connection that had just succeeded.
+        let connector = FakeConnector(.succeed)
+        let model = LiveModel(connector: connector, timeout: 8, sleep: neverSleep)
+        model.start()
+        await waitUntil { model.mode == .live }
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertEqual(model.mode, .live)
+        XCTAssertEqual(connector.disconnects, 0)
+        model.stop()
+    }
+
     func testConnectFailureFallsBackWithReason() async {
         let model = LiveModel(connector: FakeConnector(.fail), timeout: 8, sleep: neverSleep)
         model.start()

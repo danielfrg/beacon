@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import WebRTC
 
 enum WebRTCConnectorError: LocalizedError {
@@ -16,6 +17,7 @@ enum WebRTCConnectorError: LocalizedError {
 /// Receive-only WebRTC session negotiated through Frigate's go2rtc signaling WebSocket.
 final class WebRTCConnector: NSObject, LiveConnector, @unchecked Sendable {
     private static let factory = RTCPeerConnectionFactory()
+    private static let log = Logger(subsystem: "com.example.Beacon", category: "live")
 
     /// Called on the main actor when the remote video track arrives.
     var onVideoTrack: (@MainActor (RTCVideoTrack) -> Void)?
@@ -60,6 +62,7 @@ final class WebRTCConnector: NSObject, LiveConnector, @unchecked Sendable {
             established = false
         }
         socket.resume()
+        Self.log.info("signaling socket opened")
         receiveTask = Task { [weak self] in await self?.receiveLoop(socket: socket, peer: peer) }
 
         let offerConstraints = RTCMediaConstraints(
@@ -68,6 +71,7 @@ final class WebRTCConnector: NSObject, LiveConnector, @unchecked Sendable {
         let offer = try await peer.offer(for: offerConstraints)
         try await peer.setLocalDescription(offer)
         try await socket.send(.string(SignalMessage.offer(offer.sdp).encoded()))
+        Self.log.info("offer sent")
 
         try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
@@ -110,9 +114,13 @@ final class WebRTCConnector: NSObject, LiveConnector, @unchecked Sendable {
     private func receiveLoop(socket: URLSessionWebSocketTask, peer: RTCPeerConnection) async {
         while !Task.isCancelled {
             guard let message = try? await socket.receive() else { return }
-            guard case .string(let text) = message, let signal = SignalMessage.decode(text) else { continue }
+            guard case .string(let text) = message, let signal = SignalMessage.decode(text) else {
+                if case .string(let text) = message { Self.log.error("ignored signaling message: \(text.prefix(200), privacy: .public)") }
+                continue
+            }
             switch signal {
             case .answer(let sdp):
+                Self.log.info("answer received")
                 try? await peer.setRemoteDescription(RTCSessionDescription(type: .answer, sdp: sdp))
             case .candidate(let value):
                 try? await peer.add(RTCIceCandidate(sdp: value, sdpMLineIndex: 0, sdpMid: "0"))
@@ -126,6 +134,18 @@ final class WebRTCConnector: NSObject, LiveConnector, @unchecked Sendable {
         lock.withLock { peer === peerConnection }
     }
 
+    /// Safety net: hand the view the receive-only video track even if the delegate never announced it.
+    private func deliverExistingVideoTrack(from peerConnection: RTCPeerConnection) {
+        guard let track = peerConnection.transceivers.first(where: { $0.mediaType == .video })?.receiver.track as? RTCVideoTrack
+        else {
+            Self.log.error("connected but no video track on any transceiver")
+            return
+        }
+        Self.log.info("video track from transceivers")
+        let callback = onVideoTrack
+        Task { @MainActor in callback?(track) }
+    }
+
     private func sendCandidate(_ candidate: String) {
         let socket = lock.withLock { self.socket }
         socket?.send(.string(SignalMessage.candidate(candidate).encoded())) { _ in }
@@ -137,7 +157,9 @@ extension WebRTCConnector: RTCPeerConnectionDelegate {
     func peerConnection(_ peerConnection: RTCPeerConnection, didAdd stream: RTCMediaStream) {}
     func peerConnection(_ peerConnection: RTCPeerConnection, didRemove stream: RTCMediaStream) {}
     func peerConnectionShouldNegotiate(_ peerConnection: RTCPeerConnection) {}
-    func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCIceConnectionState) {}
+    func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCIceConnectionState) {
+        Self.log.info("ice connection state: \(newState.rawValue, privacy: .public)")
+    }
     func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCIceGatheringState) {}
     func peerConnection(_ peerConnection: RTCPeerConnection, didRemove candidates: [RTCIceCandidate]) {}
     func peerConnection(_ peerConnection: RTCPeerConnection, didOpen dataChannel: RTCDataChannel) {}
@@ -149,8 +171,10 @@ extension WebRTCConnector: RTCPeerConnectionDelegate {
 
     func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCPeerConnectionState) {
         guard isCurrent(peerConnection) else { return } // e.g. a closed peer from before a retry
+        Self.log.info("connection state: \(newState.rawValue, privacy: .public)")
         switch newState {
         case .connected:
+            deliverExistingVideoTrack(from: peerConnection)
             let waiting = lock.withLock { () -> CheckedContinuation<Void, Error>? in
                 established = true
                 defer { pending = nil }
@@ -173,6 +197,7 @@ extension WebRTCConnector: RTCPeerConnectionDelegate {
     func peerConnection(_ peerConnection: RTCPeerConnection, didStartReceivingOn transceiver: RTCRtpTransceiver) {
         guard isCurrent(peerConnection),
               let track = transceiver.receiver.track as? RTCVideoTrack else { return }
+        Self.log.info("video track from delegate")
         let callback = onVideoTrack
         Task { @MainActor in callback?(track) }
     }

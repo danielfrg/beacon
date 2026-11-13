@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import OSLog
 
 /// Something that can establish a live video connection (WebRTC in production, a fake in tests).
 protocol LiveConnector: AnyObject, Sendable {
@@ -20,7 +21,10 @@ final class LiveModel {
         case fallback(reason: String)
     }
 
-    private(set) var mode: Mode = .connecting
+    private(set) var mode: Mode = .connecting {
+        didSet { Self.log.info("live mode: \(String(describing: self.mode), privacy: .public)") }
+    }
+    private static let log = Logger(subsystem: "com.example.Beacon", category: "live")
 
     private let connector: LiveConnector
     private let timeout: TimeInterval
@@ -96,6 +100,8 @@ final class LiveModel {
             }
             group.addTask {
                 await sleep(timeout)
+                // A cancelled timer wakes early; that means connect() already won, so leave it alone.
+                if Task.isCancelled { return .failure(Failure(reason: "Cancelled")) }
                 // connect() may be stuck in calls that ignore cancellation; tearing the connection
                 // down is what frees it, so the deadline really is a deadline.
                 connector.disconnect()

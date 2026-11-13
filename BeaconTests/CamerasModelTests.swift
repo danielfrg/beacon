@@ -44,4 +44,14 @@ final class CamerasModelTests: XCTestCase {
         XCTAssertEqual(m.state, .loaded)
         XCTAssertTrue(m.visible.isEmpty)
     }
+
+    func testUpdateReplacesCamera() async {
+        StubURLProtocol.handler = { _ in (200, Data(#"{"cameras":{"a":{"enabled":true}}}"#.utf8)) }
+        let m = model()
+        await m.load(baseURL: base, session: StubURLProtocol.session())
+        var changed = m.cameras[0]
+        changed.detectEnabled = true
+        m.update(changed)
+        XCTAssertTrue(m.cameras[0].detectEnabled)
+    }
 }

@@ -40,6 +40,10 @@ final class CamerasModel {
         }
     }
 
+    func update(_ camera: Camera) {
+        if let index = cameras.firstIndex(where: { $0.name == camera.name }) { cameras[index] = camera }
+    }
+
     func move(from source: IndexSet, to destination: Int) {
         preferences?.move(from: source, to: destination, in: cameras)
     }

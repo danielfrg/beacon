@@ -43,4 +43,19 @@ final class FlowUITests: XCTestCase {
         app.buttons["Done"].tap()
         XCTAssertTrue(card("driveway").waitForExistence(timeout: 5))
     }
+
+    func testCameraDetailsShowsToggles() {
+        XCTAssertTrue(card("front_door").waitForExistence(timeout: 10))
+        card("front_door").press(forDuration: 1)
+        app.buttons["Details"].tap()
+        XCTAssertTrue(app.switches["Detect"].waitForExistence(timeout: 5))
+        snap("details")
+        // The switch element spans the whole row; tap where the control is.
+        app.switches["Detect"].coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+        let detect = app.switches["Detect"]
+        let off = NSPredicate(format: "value == '0'")
+        expectation(for: off, evaluatedWith: detect)
+        waitForExpectations(timeout: 5)
+        snap("details-toggled")
+    }
 }

@@ -4,6 +4,7 @@ struct CameraListView: View {
     @Environment(ServerSettings.self) private var settings
     @Environment(CamerasModel.self) private var model
     @State private var showSettings = false
+    @State private var detailCamera: Camera?
 
     var body: some View {
         content
@@ -21,6 +22,11 @@ struct CameraListView: View {
                 Text(camera.name) // replaced by the live view in a later task
             }
             .sheet(isPresented: $showSettings) { SettingsView() }
+            .sheet(item: $detailCamera) { camera in
+                if let api = model.api {
+                    CameraDetailView(camera: camera, api: api) { model.update($0) }
+                }
+            }
             .task(id: settings.baseURL) { await reload() }
             .refreshable { await reload() }
     }
@@ -57,6 +63,11 @@ struct CameraListView: View {
                         ForEach(model.visible) { camera in
                             NavigationLink(value: camera) { CameraCard(camera: camera, api: api) }
                                 .buttonStyle(.plain)
+                                .contextMenu {
+                                    Button { detailCamera = camera } label: {
+                                        Label("Details", systemImage: "info.circle")
+                                    }
+                                }
                         }
                     }
                     .padding(.horizontal, 16)

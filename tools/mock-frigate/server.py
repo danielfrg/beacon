@@ -58,10 +58,14 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_PUT(self):
         parts = [unquote(p) for p in urlparse(self.path).path.strip("/").split("/")]
-        self.rfile.read(int(self.headers.get("Content-Length", 0)))
+        body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
         if self.fail_toggles:
             return self._send(500, b'{"success":false}')
         if len(parts) >= 5 and parts[:2] == ["api", "camera"] and parts[3] == "set":
+            section = {"detect": "detect", "motion": "motion", "recordings": "record", "snapshots": "snapshots"}.get(parts[4])
+            camera = CONFIG["cameras"].get(parts[2])
+            if section and camera is not None:
+                camera.setdefault(section, {})["enabled"] = json.loads(body).get("value") == "ON"
             return self._send(200, b'{"success":true}')
         self._send(404, b"{}")
 

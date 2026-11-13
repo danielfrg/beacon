@@ -19,7 +19,7 @@ struct CameraListView: View {
                 }
             }
             .navigationDestination(for: Camera.self) { camera in
-                Text(camera.name) // replaced by the live view in a later task
+                if let api = model.api { LiveView(camera: camera, api: api) }
             }
             .sheet(isPresented: $showSettings) { SettingsView() }
             .sheet(item: $detailCamera) { camera in

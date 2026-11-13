@@ -58,4 +58,18 @@ final class FlowUITests: XCTestCase {
         waitForExpectations(timeout: 5)
         snap("details-toggled")
     }
+
+    func testLiveViewFallsBackToSnapshotsWhenWebRTCUnavailable() {
+        XCTAssertTrue(card("front_door").waitForExistence(timeout: 10))
+        card("front_door").tap()
+        let banner = app.staticTexts["Live video unavailable"]
+        _ = banner.waitForExistence(timeout: 15)
+        snap("live-state")
+        if !banner.exists { print("UI TREE:\n" + app.debugDescription) }
+        XCTAssertTrue(banner.exists)
+        XCTAssertTrue(app.buttons["Try Again"].exists)
+        snap("live-fallback")
+        app.buttons["Close"].tap()
+        XCTAssertTrue(card("front_door").waitForExistence(timeout: 5))
+    }
 }

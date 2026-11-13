@@ -27,6 +27,8 @@ final class WebRTCConnector: NSObject, LiveConnector, @unchecked Sendable {
     private var receiveTask: Task<Void, Never>?
     private var pending: CheckedContinuation<Void, Error>?
     private var established = false
+    /// Bumped by every connect() and disconnect(); lets a stale attempt notice it was superseded.
+    private var generation = 0
     private var failureHandler: (@Sendable (String) -> Void)?
 
     init(signalingURL: URL) {
@@ -38,6 +40,7 @@ final class WebRTCConnector: NSObject, LiveConnector, @unchecked Sendable {
     }
 
     func connect() async throws {
+        let attempt = lock.withLock { () -> Int in generation += 1; return generation }
         let config = RTCConfiguration()
         config.sdpSemantics = .unifiedPlan
         config.iceServers = []
@@ -69,7 +72,13 @@ final class WebRTCConnector: NSObject, LiveConnector, @unchecked Sendable {
         try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                 lock.withLock {
-                    if established { continuation.resume() } else { pending = continuation }
+                    if generation != attempt || Task.isCancelled {
+                        continuation.resume(throwing: CancellationError()) // superseded or cancelled meanwhile
+                    } else if established {
+                        continuation.resume()
+                    } else {
+                        pending = continuation
+                    }
                 }
             }
         } onCancel: { [weak self] in
@@ -79,7 +88,7 @@ final class WebRTCConnector: NSObject, LiveConnector, @unchecked Sendable {
 
     func disconnect() {
         let (peer, socket, task) = lock.withLock { () -> (RTCPeerConnection?, URLSessionWebSocketTask?, Task<Void, Never>?) in
-            defer { self.peer = nil; self.socket = nil; self.receiveTask = nil; established = false }
+            defer { self.peer = nil; self.socket = nil; self.receiveTask = nil; established = false; generation += 1 }
             return (self.peer, self.socket, self.receiveTask)
         }
         task?.cancel()
@@ -113,6 +122,10 @@ final class WebRTCConnector: NSObject, LiveConnector, @unchecked Sendable {
         }
     }
 
+    private func isCurrent(_ peerConnection: RTCPeerConnection) -> Bool {
+        lock.withLock { peer === peerConnection }
+    }
+
     private func sendCandidate(_ candidate: String) {
         let socket = lock.withLock { self.socket }
         socket?.send(.string(SignalMessage.candidate(candidate).encoded())) { _ in }
@@ -130,10 +143,12 @@ extension WebRTCConnector: RTCPeerConnectionDelegate {
     func peerConnection(_ peerConnection: RTCPeerConnection, didOpen dataChannel: RTCDataChannel) {}
 
     func peerConnection(_ peerConnection: RTCPeerConnection, didGenerate candidate: RTCIceCandidate) {
+        guard isCurrent(peerConnection) else { return }
         sendCandidate(candidate.sdp)
     }
 
     func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCPeerConnectionState) {
+        guard isCurrent(peerConnection) else { return } // e.g. a closed peer from before a retry
         switch newState {
         case .connected:
             let waiting = lock.withLock { () -> CheckedContinuation<Void, Error>? in
@@ -156,7 +171,8 @@ extension WebRTCConnector: RTCPeerConnectionDelegate {
     }
 
     func peerConnection(_ peerConnection: RTCPeerConnection, didStartReceivingOn transceiver: RTCRtpTransceiver) {
-        guard let track = transceiver.receiver.track as? RTCVideoTrack else { return }
+        guard isCurrent(peerConnection),
+              let track = transceiver.receiver.track as? RTCVideoTrack else { return }
         let callback = onVideoTrack
         Task { @MainActor in callback?(track) }
     }

@@ -72,4 +72,15 @@ final class CameraDetailModelTests: XCTestCase {
         XCTAssertTrue(model.isOn(.detect))
         XCTAssertFalse(model.isOn(.recordings))
     }
+
+    func testServerRefusalShowsError() async {
+        // Frigate answers 200 but keeps detect on (e.g. a dependent setting refuses the change).
+        StubURLProtocol.handler = { [self] request in
+            request.httpMethod == "PUT" ? (200, Data(#"{"success":true}"#.utf8)) : (200, configJSON(detect: true, record: false))
+        }
+        let model = makeModel()
+        await model.toggle(.detect, to: false)
+        XCTAssertTrue(model.camera.detectEnabled, "shows the server's real state")
+        XCTAssertNotNil(model.error, "tells the user the change wasn't applied")
+    }
 }

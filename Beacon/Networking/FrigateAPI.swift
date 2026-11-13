@@ -4,6 +4,8 @@ enum FrigateError: Error, Equatable {
     case badStatus(Int)
     case unreachable
     case invalidResponse
+    /// iOS App Transport Security refused a plain-HTTP connection (e.g. to a dotted hostname).
+    case insecureConnectionBlocked
 }
 
 extension FrigateError {
@@ -11,6 +13,8 @@ extension FrigateError {
     static func userMessage(for error: Error) -> String {
         switch error as? FrigateError {
         case .unreachable: "Can't reach the server. Check the address and that you're on the same network."
+        case .insecureConnectionBlocked:
+            "iOS blocked this plain-HTTP address. Use an IP address or a .local name, or an https:// address."
         case .badStatus(let code): "The server answered with an error (\(code))."
         default: "The server's response couldn't be read. Is this a Frigate server?"
         }
@@ -88,6 +92,8 @@ struct FrigateAPI {
         let response: URLResponse
         do {
             (data, response) = try await session.data(for: request)
+        } catch let error as URLError where error.code == .appTransportSecurityRequiresSecureConnection {
+            throw FrigateError.insecureConnectionBlocked
         } catch {
             throw FrigateError.unreachable
         }

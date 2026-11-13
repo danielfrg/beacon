@@ -2,12 +2,13 @@ import XCTest
 @testable import Beacon
 
 private final class FakeConnector: LiveConnector, @unchecked Sendable {
-    enum Behavior { case succeed, fail, hang }
+    enum Behavior { case succeed, fail, hang, stubborn }
     var behavior: Behavior
     var disconnects = 0
     var cancelled = false
     var connects = 0
     var failureHandler: (@Sendable (String) -> Void)?
+    private var stuck: CheckedContinuation<Void, Error>?
 
     init(_ behavior: Behavior) { self.behavior = behavior }
 
@@ -18,12 +19,19 @@ private final class FakeConnector: LiveConnector, @unchecked Sendable {
         switch behavior {
         case .succeed: return
         case .fail: throw FrigateError.unreachable
+        case .stubborn:
+            // Like the bridged WebRTC callbacks: ignores Task cancellation, only disconnect() frees it.
+            try await withCheckedThrowingContinuation { (c: CheckedContinuation<Void, Error>) in stuck = c }
         case .hang:
             do { try await Task.sleep(nanoseconds: 60_000_000_000) } catch { cancelled = true; throw error }
         }
     }
 
-    func disconnect() { disconnects += 1 }
+    func disconnect() {
+        disconnects += 1
+        stuck?.resume(throwing: CancellationError())
+        stuck = nil
+    }
 }
 
 @MainActor
@@ -98,5 +106,13 @@ final class LiveModelTests: XCTestCase {
         await waitUntil { if case .fallback = model.mode { true } else { false } }
         XCTAssertEqual(model.mode, .fallback(reason: "connection lost"))
         model.stop()
+    }
+
+    func testTimeoutDisconnectsSoAConnectThatIgnoresCancellationCannotHangTheDeadline() async {
+        let connector = FakeConnector(.stubborn)
+        let model = LiveModel(connector: connector, timeout: 8, sleep: instantSleep)
+        model.start()
+        await waitUntil { if case .fallback = model.mode { true } else { false } }
+        guard case .fallback = model.mode else { return XCTFail("still \(model.mode): the timeout never fired") }
     }
 }

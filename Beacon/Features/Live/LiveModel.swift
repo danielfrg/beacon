@@ -96,6 +96,9 @@ final class LiveModel {
             }
             group.addTask {
                 await sleep(timeout)
+                // connect() may be stuck in calls that ignore cancellation; tearing the connection
+                // down is what frees it, so the deadline really is a deadline.
+                connector.disconnect()
                 return .failure(Failure(reason: "Timed out connecting to live video."))
             }
             let first = await group.next() ?? .failure(Failure(reason: "Live video unavailable."))

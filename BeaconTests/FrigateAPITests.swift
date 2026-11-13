@@ -102,3 +102,19 @@ final class FrigateAPISnapshotTests: XCTestCase {
         XCTAssertEqual(StubURLProtocol.lastRequest?.cachePolicy, .reloadIgnoringLocalCacheData)
     }
 }
+
+final class FrigateAPIErrorTests: XCTestCase {
+    func testATSBlockIsReportedDistinctly() async {
+        StubURLProtocol.handler = { _ in throw URLError(.appTransportSecurityRequiresSecureConnection) }
+        let api = FrigateAPI(baseURL: URL(string: "http://nvr.example.com:5000")!, session: StubURLProtocol.session())
+        do {
+            _ = try await api.fetchCameras()
+            XCTFail("expected throw")
+        } catch let error as FrigateError {
+            XCTAssertEqual(error, .insecureConnectionBlocked)
+            XCTAssertTrue(FrigateError.userMessage(for: error).contains("https"))
+        } catch {
+            XCTFail("wrong error \(error)")
+        }
+    }
+}

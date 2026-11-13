@@ -51,6 +51,10 @@ final class CameraDetailModel {
         if let fresh = try? await api.fetchCameras().first(where: { $0.name == original.name }) {
             camera = fresh
         }
+        if isOn(feature) != on {
+            // Frigate accepted the request but kept the old value (e.g. it depends on another setting).
+            error = "Frigate didn't apply this change. \(feature.title) may depend on another setting."
+        }
         onChange(camera)
     }
 

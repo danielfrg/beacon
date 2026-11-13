@@ -1,0 +1,24 @@
+{
+  "cameras": {
+    "front_door": {
+      "enabled": true,
+      "detect": {"enabled": true, "width": 1280, "height": 720, "fps": 5},
+      "motion": {"enabled": true},
+      "record": {"enabled": true},
+      "snapshots": {"enabled": true},
+      "live": {"streams": {"Main": "front_door", "Sub": "front_door_sub"}}
+    },
+    "driveway": {
+      "enabled": true,
+      "detect": {"enabled": false, "width": 640, "height": 480, "fps": 5},
+      "motion": {"enabled": true},
+      "record": {"enabled": false},
+      "snapshots": {"enabled": true},
+      "live": {"streams": {"Main": "driveway"}}
+    },
+    "garage": {
+      "enabled": false,
+      "detect": {"enabled": false}
+    }
+  }
+}

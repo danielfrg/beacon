@@ -47,6 +47,13 @@ struct FrigateAPI {
         }
     }
 
+    /// Raw image bytes of the latest frame. Always bypasses the URL cache so tiles really refresh.
+    func snapshotData(for camera: Camera, height: Int) async throws -> Data {
+        var request = URLRequest(url: snapshotURL(for: camera, height: height))
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        return try await send(request)
+    }
+
     func setFeature(_ feature: String, on: Bool, camera: Camera) async throws {
         var request = URLRequest(url: components(path: "/api/camera/\(camera.name)/set/\(feature)").url!)
         request.httpMethod = "PUT"

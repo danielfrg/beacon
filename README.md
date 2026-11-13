@@ -23,3 +23,9 @@ python3 tools/mock-frigate/server.py --fail-toggles
 ```
 
 Live (WebRTC) view needs a real Frigate server; against the mock it shows the snapshot fallback.
+
+Launch the app pointed at a server without typing the URL (simulator):
+
+```sh
+xcrun simctl launch booted com.example.Beacon -serverURL http://127.0.0.1:5000
+```

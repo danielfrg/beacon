@@ -88,3 +88,17 @@ final class FrigateAPITests: XCTestCase {
         }
     }
 }
+
+final class FrigateAPISnapshotTests: XCTestCase {
+    func testSnapshotDataReturnsBodyAndBypassesCache() async throws {
+        StubURLProtocol.handler = { _ in (200, Data([1, 2, 3])) }
+        let camera = Camera(name: "front_door", enabled: true, detectEnabled: false, motionEnabled: false,
+                            recordEnabled: false, snapshotsEnabled: false, width: nil, height: nil, fps: nil,
+                            goStream: "front_door")
+        let api = FrigateAPI(baseURL: URL(string: "http://example.com:5000")!, session: StubURLProtocol.session())
+        let data = try await api.snapshotData(for: camera, height: 360)
+        XCTAssertEqual(data, Data([1, 2, 3]))
+        XCTAssertEqual(StubURLProtocol.lastRequest?.url?.query, "h=360")
+        XCTAssertEqual(StubURLProtocol.lastRequest?.cachePolicy, .reloadIgnoringLocalCacheData)
+    }
+}

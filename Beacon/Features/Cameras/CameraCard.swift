@@ -45,10 +45,13 @@ struct CameraCard: View {
             Circle()
                 .fill(snapshot.isFresh ? Color.green : Color.gray)
                 .frame(width: 8, height: 8)
-            Text(camera.name).font(.headline)
-            if !camera.enabled { Text("Disabled").font(.caption).foregroundStyle(.white.opacity(0.7)) }
-            Spacer()
+            Text(camera.name).font(.headline).lineLimit(1)
+            if !camera.enabled {
+                Text("Disabled").font(.caption).foregroundStyle(.white.opacity(0.7)).lineLimit(1).fixedSize()
+            }
+            Spacer(minLength: 0)
         }
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge) // cards keep their shape at accessibility sizes
         .foregroundStyle(.white)
         .padding(12)
         .background(LinearGradient(colors: [.clear, .black.opacity(0.65)], startPoint: .top, endPoint: .bottom))

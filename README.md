@@ -39,3 +39,14 @@ python3 tools/mock-frigate/server.py &
 xcodebuild test -project Beacon.xcodeproj -scheme BeaconUI \
   -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
+
+## Live view
+
+Full-screen live view uses WebRTC, negotiated over Frigate's signaling WebSocket on the normal Frigate port
+(`/live/webrtc/api/ws`). Video flows over go2rtc's WebRTC port (8555 by default), so the server must advertise
+a candidate address your phone can reach (`go2rtc.webrtc.candidates`). If WebRTC can't connect, the view
+falls back to refreshing snapshots and shows why.
+
+Known limitations (MVP): no authentication, plain HTTP on a local network only, no audio, no recordings,
+and the iOS WebRTC build reliably decodes H.264 only (H.265 cameras may fall back to snapshots).
+The first time you connect, iOS asks for local network access; allow it.

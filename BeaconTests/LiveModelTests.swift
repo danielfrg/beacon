@@ -117,6 +117,7 @@ final class LiveModelTests: XCTestCase {
         connector.failureHandler?("connection lost")
         await waitUntil { if case .fallback = model.mode { true } else { false } }
         XCTAssertEqual(model.mode, .fallback(reason: "connection lost"))
+        XCTAssertGreaterThanOrEqual(connector.disconnects, 1, "a dropped connection must be closed, not left open")
         model.stop()
     }
 

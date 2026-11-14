@@ -115,6 +115,7 @@ final class LiveModel {
 
     private func handleDrop(_ reason: String) {
         guard mode == .live else { return }
+        connector.disconnect() // don't leave the dead session's socket and peer open
         mode = .fallback(reason: reason)
     }
 

@@ -10,6 +10,8 @@ struct SettingsView: View {
     @State private var checking = false
     @State private var loadedAddress = false
     @State private var message: (text: String, isError: Bool)?
+    @State private var appIcon = AppIconChoice.current
+    @State private var iconError: String?
 
     var body: some View {
         NavigationStack {
@@ -48,6 +50,37 @@ struct SettingsView: View {
                     .pickerStyle(.segmented)
                 }
 
+                if AppIconChoice.isSupported {
+                    Section {
+                        ForEach(AppIconChoice.allCases) { choice in
+                            Button {
+                                Task { await select(choice) }
+                            } label: {
+                                HStack(spacing: 14) {
+                                    Image(choice.previewName)
+                                        .resizable()
+                                        .frame(width: 44, height: 44)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .strokeBorder(.primary.opacity(0.12)))
+                                    Text(choice.title).foregroundStyle(.primary)
+                                    Spacer()
+                                    if appIcon == choice {
+                                        Image(systemName: "checkmark").foregroundStyle(.tint)
+                                    }
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityAddTraits(appIcon == choice ? .isSelected : [])
+                        }
+                    } header: {
+                        Text("App icon")
+                    } footer: {
+                        if let iconError { Text(iconError).foregroundStyle(Color.red) }
+                    }
+                }
+
                 Section {
                     NavigationLink("Manage Cameras") { ManageCamerasView() }
                         .disabled(model.cameras.isEmpty)
@@ -62,6 +95,16 @@ struct SettingsView: View {
                 loadedAddress = true
                 address = settings.baseURL?.absoluteString ?? ""
             }
+        }
+    }
+
+    private func select(_ choice: AppIconChoice) async {
+        iconError = nil
+        do {
+            try await AppIconChoice.apply(choice)
+            appIcon = choice
+        } catch {
+            iconError = "Couldn't change the icon: \(error.localizedDescription)"
         }
     }
 

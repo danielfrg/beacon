@@ -61,6 +61,7 @@ struct LiveView: View {
         }
         .onChange(of: live.mode) { _, mode in
             if case .fallback = mode { snapshot.start() } else { snapshot.stop() }
+            if mode == .connecting { track = nil } // don't bind a dead track from the previous session
         }
     }
 

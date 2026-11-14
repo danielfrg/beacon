@@ -50,3 +50,23 @@ falls back to refreshing snapshots and shows why.
 Known limitations (MVP): no authentication, plain HTTP on a local network only, no audio, no recordings,
 and the iOS WebRTC build reliably decodes H.264 only (H.265 cameras may fall back to snapshots).
 The first time you connect, iOS asks for local network access; allow it.
+
+## Running on a physical iPhone
+
+1. In Xcode, sign in under Settings → Accounts (a free Apple ID works) and enable Developer Mode on the phone.
+2. Create `Config/Local.xcconfig` (git-ignored) with your own team and a unique bundle ID:
+
+   ```
+   DEVELOPMENT_TEAM = YOURTEAMID
+   PRODUCT_BUNDLE_IDENTIFIER = com.example.YourBeacon
+   ```
+3. `xcodegen generate`, then build and install:
+
+   ```sh
+   xcodebuild -project Beacon.xcodeproj -scheme Beacon -destination 'id=<device UDID>' \
+     -allowProvisioningUpdates -derivedDataPath build build
+   xcrun devicectl device install app --device <device UDID> build/Build/Products/Debug-iphoneos/Beacon.app
+   xcrun devicectl device process launch --device <device UDID> <your bundle id>
+   ```
+
+The first launch asks you to trust the developer app (Settings → General → VPN & Device Management) and to allow local network access.

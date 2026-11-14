@@ -1,0 +1,6 @@
+// Defaults that build anywhere (simulator). Device signing values live in Config/Local.xcconfig,
+// which is git-ignored; see README.
+PRODUCT_BUNDLE_IDENTIFIER = com.example.Beacon
+CODE_SIGN_STYLE = Automatic
+
+#include? "Local.xcconfig"

@@ -51,10 +51,11 @@ final class FlowUITests: XCTestCase {
         XCTAssertTrue(app.switches["Detect"].waitForExistence(timeout: 5))
         snap("details")
         // The switch element spans the whole row; tap where the control is.
-        app.switches["Detect"].coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+        // The mock remembers toggles between runs, so assert the value flips rather than a fixed value.
         let detect = app.switches["Detect"]
-        let off = NSPredicate(format: "value == '0'")
-        expectation(for: off, evaluatedWith: detect)
+        let before = detect.value as? String ?? ""
+        detect.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+        expectation(for: NSPredicate(format: "value != %@", before), evaluatedWith: detect)
         waitForExpectations(timeout: 5)
         snap("details-toggled")
     }

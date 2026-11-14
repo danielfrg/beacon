@@ -36,6 +36,7 @@ final class CameraDetailModel {
     func toggle(_ feature: Feature, to on: Bool) async {
         guard !busy.contains(feature) else { return }
         let original = camera
+        let previous = isOn(feature)
         error = nil
         busy.insert(feature)
         defer { busy.remove(feature) }
@@ -43,7 +44,7 @@ final class CameraDetailModel {
         do {
             try await api.setFeature(feature.rawValue, on: on, camera: original)
         } catch {
-            camera = original
+            set(feature, previous) // only this feature; other toggles may be mid-flight
             self.error = "Couldn't change \(feature.title.lowercased()): \(FrigateError.userMessage(for: error))"
             return
         }

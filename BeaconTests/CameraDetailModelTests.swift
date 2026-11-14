@@ -83,4 +83,21 @@ final class CameraDetailModelTests: XCTestCase {
         XCTAssertTrue(model.camera.detectEnabled, "shows the server's real state")
         XCTAssertNotNil(model.error, "tells the user the change wasn't applied")
     }
+
+    func testFailedToggleOnlyRevertsItsOwnFeature() async throws {
+        StubURLProtocol.delayForPathContaining = ["/set/detect": 0.3]
+        defer { StubURLProtocol.delayForPathContaining = [:] }
+        StubURLProtocol.handler = { request in
+            if request.url?.path.hasSuffix("/set/detect") == true { return (500, Data()) } // slow and failing
+            if request.httpMethod == "PUT" { return (200, Data()) }                          // snapshots: fine
+            return (500, Data())                                                              // refetch fails, keeps local value
+        }
+        let model = makeModel()
+        let slowFailure = Task { await model.toggle(.detect, to: false) }
+        try await Task.sleep(nanoseconds: 60_000_000)
+        await model.toggle(.snapshots, to: false)
+        await slowFailure.value
+        XCTAssertTrue(model.camera.detectEnabled, "the failed toggle reverted")
+        XCTAssertFalse(model.camera.snapshotsEnabled, "the successful toggle must not be undone by the other's failure")
+    }
 }

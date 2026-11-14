@@ -7,6 +7,8 @@ final class StubURLProtocol: URLProtocol {
     nonisolated(unsafe) static var lastBody: Data?
     /// Delays a host's responses without blocking the loader thread (host -> seconds).
     nonisolated(unsafe) static var delayForHost: [String: TimeInterval] = [:]
+    /// Delays responses whose path contains the key (substring -> seconds).
+    nonisolated(unsafe) static var delayForPathContaining: [String: TimeInterval] = [:]
 
     static func session() -> URLSession {
         let config = URLSessionConfiguration.ephemeral
@@ -33,7 +35,10 @@ final class StubURLProtocol: URLProtocol {
         } else {
             Self.lastBody = request.httpBody
         }
-        let delay = request.url?.host.flatMap { Self.delayForHost[$0] } ?? 0
+        let path = request.url?.path ?? ""
+        let hostDelay = request.url?.host.flatMap { Self.delayForHost[$0] } ?? 0
+        let pathDelay = Self.delayForPathContaining.first(where: { path.contains($0.key) })?.value ?? 0
+        let delay = max(hostDelay, pathDelay)
         do {
             let (status, body) = try Self.handler?(request) ?? (200, Data())
             let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!

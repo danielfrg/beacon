@@ -5,6 +5,7 @@ struct SettingsView: View {
     @Environment(ServerSettings.self) private var settings
     @Environment(CamerasModel.self) private var model
 
+    @AppStorage(Appearance.storageKey) private var appearance = Appearance.default.rawValue
     @State private var address = ""
     @State private var checking = false
     @State private var message: (text: String, isError: Bool)?
@@ -37,6 +38,13 @@ struct SettingsView: View {
                     } else {
                         Text("The address of your Frigate server, for example 192.0.2.10:5000.")
                     }
+                }
+
+                Section("Appearance") {
+                    Picker("Appearance", selection: $appearance) {
+                        ForEach(Appearance.allCases) { Text($0.title).tag($0.rawValue) }
+                    }
+                    .pickerStyle(.segmented)
                 }
 
                 Section {

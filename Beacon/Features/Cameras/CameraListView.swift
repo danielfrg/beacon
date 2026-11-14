@@ -37,7 +37,7 @@ struct CameraListView: View {
         switch model.state {
         case .noServer:
             ContentUnavailableView {
-                Label("Add your Frigate server", systemImage: "video.slash")
+                Text("Add your Frigate server").font(.title2.bold())
             } description: {
                 Text("Enter the address of your Frigate server to see your cameras.")
             } actions: {

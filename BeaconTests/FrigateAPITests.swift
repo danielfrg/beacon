@@ -118,3 +118,24 @@ final class FrigateAPIErrorTests: XCTestCase {
         }
     }
 }
+
+final class FrigateAPITimeoutTests: XCTestCase {
+    func testRequestsUseShortTimeout() async throws {
+        StubURLProtocol.handler = { _ in (200, Data(#"{"cameras":{}}"#.utf8)) }
+        let api = FrigateAPI(baseURL: URL(string: "http://example.com:5000")!, session: StubURLProtocol.session())
+        _ = try await api.fetchCameras()
+        XCTAssertEqual(StubURLProtocol.lastRequest?.timeoutInterval, 10)
+    }
+
+    func testCancelledRequestThrowsCancellationNotUnreachable() async {
+        StubURLProtocol.handler = { _ in throw URLError(.cancelled) }
+        let api = FrigateAPI(baseURL: URL(string: "http://example.com:5000")!, session: StubURLProtocol.session())
+        do {
+            _ = try await api.fetchCameras()
+            XCTFail("expected throw")
+        } catch is CancellationError {
+        } catch {
+            XCTFail("wrong error \(error)")
+        }
+    }
+}

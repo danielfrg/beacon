@@ -5,6 +5,8 @@ final class StubURLProtocol: URLProtocol {
     nonisolated(unsafe) static var handler: ((URLRequest) throws -> (Int, Data))?
     nonisolated(unsafe) static var lastRequest: URLRequest?
     nonisolated(unsafe) static var lastBody: Data?
+    /// Delays a host's responses without blocking the loader thread (host -> seconds).
+    nonisolated(unsafe) static var delayForHost: [String: TimeInterval] = [:]
 
     static func session() -> URLSession {
         let config = URLSessionConfiguration.ephemeral
@@ -31,14 +33,25 @@ final class StubURLProtocol: URLProtocol {
         } else {
             Self.lastBody = request.httpBody
         }
+        let delay = request.url?.host.flatMap { Self.delayForHost[$0] } ?? 0
         do {
             let (status, body) = try Self.handler?(request) ?? (200, Data())
             let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!
-            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-            client?.urlProtocol(self, didLoad: body)
-            client?.urlProtocolDidFinishLoading(self)
+            deliver(after: delay) {
+                self.client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+                self.client?.urlProtocol(self, didLoad: body)
+                self.client?.urlProtocolDidFinishLoading(self)
+            }
         } catch {
-            client?.urlProtocol(self, didFailWithError: error)
+            deliver(after: delay) { self.client?.urlProtocol(self, didFailWithError: error) }
+        }
+    }
+
+    private func deliver(after delay: TimeInterval, _ work: @escaping () -> Void) {
+        if delay > 0 {
+            DispatchQueue.global().asyncAfter(deadline: .now() + delay, execute: work)
+        } else {
+            work()
         }
     }
 

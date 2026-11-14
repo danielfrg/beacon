@@ -21,22 +21,39 @@ final class CamerasModel {
     var visible: [Camera] { preferences?.arranged(cameras) ?? [] }
     var allArranged: [(camera: Camera, hidden: Bool)] { preferences?.allArranged(cameras) ?? [] }
 
+    /// Set when a refresh fails while an earlier list is still showing.
+    private(set) var refreshError: String?
+    private var loadToken = 0
+
     func load(baseURL: URL?, session: URLSession = .shared) async {
+        loadToken += 1
+        let token = loadToken
         guard let baseURL else {
-            api = nil; cameras = []; preferences = nil
+            api = nil; cameras = []; preferences = nil; refreshError = nil
             state = .noServer
             return
         }
-        if api?.baseURL != baseURL { cameras = [] }
+        if api?.baseURL != baseURL { cameras = []; refreshError = nil }
         let api = FrigateAPI(baseURL: baseURL, session: session)
         self.api = api
         preferences = CameraPreferences(defaults: defaults, server: baseURL)
         if cameras.isEmpty { state = .loading }
         do {
-            cameras = try await api.fetchCameras()
+            let fetched = try await api.fetchCameras()
+            guard token == loadToken else { return } // a newer load took over
+            cameras = fetched
+            refreshError = nil
             state = .loaded
+        } catch is CancellationError {
+            return
         } catch {
-            state = .failed(FrigateError.userMessage(for: error))
+            guard token == loadToken else { return }
+            let message = FrigateError.userMessage(for: error)
+            if cameras.isEmpty {
+                state = .failed(message)
+            } else {
+                refreshError = message // keep showing the last good list
+            }
         }
     }
 

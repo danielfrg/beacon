@@ -22,6 +22,9 @@ extension FrigateError {
 }
 
 struct FrigateAPI {
+    /// Seconds before a request gives up, so a wrong address fails fast instead of spinning for a minute.
+    static let requestTimeout: TimeInterval = 10
+
     let baseURL: URL
     var session: URLSession = .shared
 
@@ -87,11 +90,17 @@ struct FrigateAPI {
         return parts
     }
 
-    private func send(_ request: URLRequest) async throws -> Data {
+    private func send(_ original: URLRequest) async throws -> Data {
+        var request = original
+        request.timeoutInterval = Self.requestTimeout
         let data: Data
         let response: URLResponse
         do {
             (data, response) = try await session.data(for: request)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let error as URLError where error.code == .cancelled {
+            throw CancellationError() // we were cancelled, the server wasn't unreachable
         } catch let error as URLError where error.code == .appTransportSecurityRequiresSecureConnection {
             throw FrigateError.insecureConnectionBlocked
         } catch {

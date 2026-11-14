@@ -59,6 +59,15 @@ struct CameraListView: View {
                                        description: Text("No cameras are shown. Check Manage Cameras in Settings."))
             } else if let api = model.api {
                 ScrollView {
+                    if let error = model.refreshError {
+                        Label(error, systemImage: "exclamationmark.triangle.fill")
+                            .font(.footnote)
+                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .padding(.horizontal, 16)
+                            .accessibilityLabel("Couldn't refresh. \(error)")
+                    }
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 16)], spacing: 16) {
                         ForEach(model.visible) { camera in
                             NavigationLink(value: camera) { CameraCard(camera: camera, api: api) }

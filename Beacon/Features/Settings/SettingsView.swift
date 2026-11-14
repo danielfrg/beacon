@@ -38,8 +38,6 @@ struct SettingsView: View {
                 } footer: {
                     if let message {
                         Text(message.text).foregroundStyle(message.isError ? Color.red : Color.green)
-                    } else {
-                        Text("The address of your Frigate server, for example https://frigate.example.com.")
                     }
                 }
 

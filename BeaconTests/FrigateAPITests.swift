@@ -139,3 +139,48 @@ final class FrigateAPITimeoutTests: XCTestCase {
         }
     }
 }
+
+final class FrigateAPIURLHandlingTests: XCTestCase {
+    private func camera(_ name: String, stream: String? = nil) -> Camera {
+        Camera(name: name, enabled: true, detectEnabled: false, motionEnabled: false, recordEnabled: false,
+               snapshotsEnabled: false, width: nil, height: nil, fps: nil, goStream: stream ?? name)
+    }
+
+    func testNormalizeLowercasesSchemeSoSecureServersGetWss() {
+        let url = FrigateAPI.normalize("HTTPS://example.com")
+        XCTAssertEqual(url?.absoluteString, "https://example.com")
+        let api = FrigateAPI(baseURL: url!)
+        XCTAssertEqual(api.signalingURL(for: camera("a")).scheme, "wss")
+    }
+
+    func testNormalizeKeepsSubpathAndDropsQueryAndFragment() {
+        XCTAssertEqual(FrigateAPI.normalize("example.com:5000/frigate/?x=1#y")?.absoluteString,
+                       "http://example.com:5000/frigate")
+    }
+
+    func testURLsRespectABaseSubpath() async throws {
+        let api = FrigateAPI(baseURL: URL(string: "http://example.com/frigate")!, session: StubURLProtocol.session())
+        XCTAssertEqual(api.snapshotURL(for: camera("front_door"), height: 240).absoluteString,
+                       "http://example.com/frigate/api/front_door/latest.jpg?h=240")
+        XCTAssertEqual(api.signalingURL(for: camera("front_door")).absoluteString,
+                       "ws://example.com/frigate/live/webrtc/api/ws?src=front_door")
+        StubURLProtocol.handler = { _ in (200, Data(#"{"cameras":{}}"#.utf8)) }
+        _ = try await api.fetchCameras()
+        XCTAssertEqual(StubURLProtocol.lastRequest?.url?.path, "/frigate/api/config")
+    }
+
+    func testSlashInANameIsEncodedInPaths() async throws {
+        let api = FrigateAPI(baseURL: URL(string: "http://example.com")!, session: StubURLProtocol.session())
+        XCTAssertEqual(api.snapshotURL(for: camera("a/b"), height: 1).absoluteString,
+                       "http://example.com/api/a%2Fb/latest.jpg?h=1")
+        StubURLProtocol.handler = { _ in (200, Data()) }
+        try await api.setFeature("detect", on: true, camera: camera("a/b"))
+        XCTAssertEqual(StubURLProtocol.lastRequest?.url?.absoluteString, "http://example.com/api/camera/a%2Fb/set/detect")
+    }
+
+    func testPlusInAStreamNameIsEncodedInTheQuery() {
+        let api = FrigateAPI(baseURL: URL(string: "http://example.com")!)
+        XCTAssertEqual(api.signalingURL(for: camera("a", stream: "a+b&c")).absoluteString,
+                       "ws://example.com/live/webrtc/api/ws?src=a%2Bb%26c")
+    }
+}

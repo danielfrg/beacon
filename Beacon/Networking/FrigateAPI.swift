@@ -34,30 +34,34 @@ struct FrigateAPI {
     }
 
     /// Turns user input like " 192.0.2.10:5000/ " into `http://192.0.2.10:5000`.
+    /// Keeps a path (reverse-proxy subpath) but drops any query or fragment, and lowercases the scheme.
     static func normalize(_ input: String) -> URL? {
         var text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return nil }
         if !text.contains("://") { text = "http://" + text }
-        while text.hasSuffix("/") { text.removeLast() }
-        guard let url = URL(string: text), let host = url.host, !host.isEmpty else { return nil }
-        return url
+        guard var parts = URLComponents(string: text), let host = parts.host, !host.isEmpty else { return nil }
+        parts.scheme = parts.scheme?.lowercased()
+        parts.query = nil
+        parts.fragment = nil
+        var path = parts.percentEncodedPath
+        while path.hasSuffix("/") { path.removeLast() }
+        parts.percentEncodedPath = path
+        return parts.url
     }
 
     func snapshotURL(for camera: Camera, height: Int) -> URL {
-        var parts = components(path: "/api/\(camera.name)/latest.jpg")
-        parts.queryItems = [URLQueryItem(name: "h", value: String(height))]
-        return parts.url!
+        url(["api", camera.name, "latest.jpg"], query: [("h", String(height))])
     }
 
     func signalingURL(for camera: Camera) -> URL {
-        var parts = components(path: "/live/webrtc/api/ws")
+        var parts = URLComponents(url: url(["live", "webrtc", "api", "ws"], query: [("src", camera.goStream)]),
+                                  resolvingAgainstBaseURL: false)!
         parts.scheme = baseURL.scheme == "https" ? "wss" : "ws"
-        parts.queryItems = [URLQueryItem(name: "src", value: camera.goStream)]
         return parts.url!
     }
 
     func fetchCameras() async throws -> [Camera] {
-        let data = try await send(URLRequest(url: components(path: "/api/config").url!))
+        let data = try await send(URLRequest(url: url(["api", "config"])))
         do {
             return try Camera.decodeCameras(from: data)
         } catch {
@@ -73,7 +77,7 @@ struct FrigateAPI {
     }
 
     func setFeature(_ feature: String, on: Bool, camera: Camera) async throws {
-        var request = URLRequest(url: components(path: "/api/camera/\(camera.name)/set/\(feature)").url!)
+        var request = URLRequest(url: url(["api", "camera", camera.name, "set", feature]))
         request.httpMethod = "PUT"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["value": on ? "ON" : "OFF"])
@@ -82,12 +86,30 @@ struct FrigateAPI {
 
     // MARK: private
 
-    /// Builds components with the camera-name-safe percent-encoded path appended to the base.
-    private func components(path: String) -> URLComponents {
+    private static let segmentAllowed: CharacterSet = {
+        var set = CharacterSet.urlPathAllowed
+        set.remove(charactersIn: "/?#")
+        return set
+    }()
+
+    private static let queryValueAllowed: CharacterSet = {
+        var set = CharacterSet.urlQueryAllowed
+        set.remove(charactersIn: "&=+#")
+        return set
+    }()
+
+    /// Appends encoded path segments (each one a single segment, so a "/" in a name can't split it)
+    /// to the base URL's own path, then the encoded query.
+    private func url(_ segments: [String], query: [(String, String)] = []) -> URL {
         var parts = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
-        let allowed = CharacterSet.urlPathAllowed.subtracting(CharacterSet(charactersIn: "?#"))
-        parts.percentEncodedPath = path.addingPercentEncoding(withAllowedCharacters: allowed) ?? path
-        return parts
+        var base = parts.percentEncodedPath
+        while base.hasSuffix("/") { base.removeLast() }
+        let encoded = segments.map { $0.addingPercentEncoding(withAllowedCharacters: Self.segmentAllowed) ?? $0 }
+        parts.percentEncodedPath = base + "/" + encoded.joined(separator: "/")
+        parts.percentEncodedQuery = query.isEmpty ? nil : query
+            .map { "\($0.0)=\($0.1.addingPercentEncoding(withAllowedCharacters: Self.queryValueAllowed) ?? $0.1)" }
+            .joined(separator: "&")
+        return parts.url!
     }
 
     private func send(_ original: URLRequest) async throws -> Data {

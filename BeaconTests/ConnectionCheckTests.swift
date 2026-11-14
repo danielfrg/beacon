@@ -26,4 +26,10 @@ final class ConnectionCheckTests: XCTestCase {
         let result = await checkConnection("example.com", session: StubURLProtocol.session())
         guard case .failed = result else { return XCTFail("expected failed") }
     }
+
+    func testMalformedAddressSaysSo() async {
+        let result = await checkConnection("192.0.2.10 :5000", session: StubURLProtocol.session())
+        guard case .failed(let message) = result else { return XCTFail("expected failed, got \(result)") }
+        XCTAssertTrue(message.contains("valid address"))
+    }
 }

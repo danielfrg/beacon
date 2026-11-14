@@ -5,11 +5,13 @@ import WebRTC
 enum WebRTCConnectorError: LocalizedError {
     case setupFailed
     case connectionFailed
+    case server(String)
 
     var errorDescription: String? {
         switch self {
         case .setupFailed: "Couldn't start live video."
         case .connectionFailed: "Couldn't establish a live video connection. Is the server's WebRTC port reachable?"
+        case .server(let message): "The server couldn't start this stream: \(message)"
         }
     }
 }
@@ -124,6 +126,9 @@ final class WebRTCConnector: NSObject, LiveConnector, @unchecked Sendable {
                 try? await peer.setRemoteDescription(RTCSessionDescription(type: .answer, sdp: sdp))
             case .candidate(let value):
                 try? await peer.add(RTCIceCandidate(sdp: value, sdpMLineIndex: 0, sdpMid: "0"))
+            case .error(let message):
+                Self.log.error("server error: \(message, privacy: .public)")
+                resolve(.failure(WebRTCConnectorError.server(message)))
             case .offer:
                 break
             }

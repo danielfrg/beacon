@@ -21,8 +21,13 @@ final class SignalingTests: XCTestCase {
         XCTAssertEqual(SignalMessage.decode(#"{"type":"webrtc/candidate","value":"candidate:1"}"#), .candidate("candidate:1"))
     }
 
+    func testServerErrorDecodes() {
+        XCTAssertEqual(SignalMessage.decode(#"{"type":"error","value":"streams: stream not found"}"#),
+                       .error("streams: stream not found"))
+    }
+
     func testUnknownOrMalformedIgnored() {
-        XCTAssertNil(SignalMessage.decode(#"{"type":"error","value":"nope"}"#))
+        XCTAssertNil(SignalMessage.decode(#"{"type":"something/else","value":"nope"}"#))
         XCTAssertNil(SignalMessage.decode("not json"))
         XCTAssertNil(SignalMessage.decode(#"{"type":"webrtc/answer"}"#))
     }

@@ -39,8 +39,8 @@ struct LiveView: View {
             try? await Task.sleep(for: .seconds(3))
             if !Task.isCancelled { withAnimation { controlsVisible = false } }
         }
-        .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
+        .background(SwipeBackEnabler())
         .statusBarHidden()
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showDetails) {

@@ -72,4 +72,27 @@ final class FlowUITests: XCTestCase {
         app.buttons["Close"].tap()
         XCTAssertTrue(card("front_door").waitForExistence(timeout: 5))
     }
+
+    func testSwipeBackFromLiveViewReturnsToList() {
+        XCTAssertTrue(card("front_door").waitForExistence(timeout: 10))
+        card("front_door").tap()
+        XCTAssertTrue(app.buttons["Close"].waitForExistence(timeout: 5))
+        let edge = app.coordinate(withNormalizedOffset: CGVector(dx: 0.0, dy: 0.5))
+        edge.press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5)))
+        XCTAssertTrue(card("front_door").waitForExistence(timeout: 5), "edge swipe should go back to the list")
+    }
+
+    func testSettingsKeepsUnsavedAddressWhenReturningFromManageCameras() {
+        XCTAssertTrue(card("front_door").waitForExistence(timeout: 10))
+        app.buttons["Settings"].tap()
+        let field = app.textFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("x")
+        let typed = field.value as? String ?? ""
+        XCTAssertTrue(typed.hasSuffix("x"))
+        app.buttons["Manage Cameras"].tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertEqual(app.textFields.firstMatch.value as? String, typed, "unsaved text must survive")
+    }
 }

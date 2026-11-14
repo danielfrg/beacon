@@ -94,6 +94,21 @@ final class SnapshotModelTests: XCTestCase {
         XCTAssertEqual(box.sleeps.first, 10)
     }
 
+    func testFailureWithoutAnImageIsReported() async {
+        let box = Box()
+        box.fail = true
+        let model = makeModel(box)
+        XCTAssertFalse(model.hasFailed)
+        model.start()
+        await waitUntil { model.hasFailed }
+        XCTAssertTrue(model.hasFailed)
+        XCTAssertNil(model.image)
+        box.fail = false
+        await waitUntil { !model.hasFailed }
+        model.stop()
+        XCTAssertFalse(model.hasFailed, "recovers when a fetch succeeds")
+    }
+
     func testDisabledCameraNeverFetches() async {
         let box = Box()
         var disabled = camera

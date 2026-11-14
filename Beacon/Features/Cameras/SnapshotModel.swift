@@ -42,6 +42,8 @@ final class SnapshotModel {
     private(set) var image: UIImage?
     private(set) var lastUpdated: Date?
     private(set) var isFresh = false
+    /// True while fetches are failing and there is no image to show yet.
+    private(set) var hasFailed = false
 
     private let camera: Camera
     private let height: Int
@@ -94,6 +96,9 @@ final class SnapshotModel {
         if let fetched = try? await fetch(camera, height), !Task.isCancelled {
             image = fetched
             lastUpdated = now()
+            hasFailed = false
+        } else if !Task.isCancelled {
+            hasFailed = true
         }
         isFresh = lastUpdated.map { now().timeIntervalSince($0) < Self.freshWindow } ?? false
     }

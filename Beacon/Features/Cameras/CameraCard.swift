@@ -33,8 +33,14 @@ struct CameraCard: View {
     @ViewBuilder private var picture: some View {
         if let image = snapshot.image {
             Image(uiImage: image).resizable().scaledToFill()
-        } else if camera.enabled {
+        } else if camera.enabled && !snapshot.hasFailed {
             ProgressView()
+        } else if camera.enabled {
+            VStack(spacing: 6) {
+                Image(systemName: "wifi.exclamationmark").font(.title)
+                Text("No signal").font(.caption)
+            }
+            .foregroundStyle(.secondary)
         } else {
             Image(systemName: "video.slash").font(.title).foregroundStyle(.secondary)
         }

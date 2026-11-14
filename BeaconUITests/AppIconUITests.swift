@@ -9,26 +9,26 @@ final class AppIconUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Open Settings"].waitForExistence(timeout: 10))
         app.buttons["Open Settings"].tap()
 
-        let sun = app.buttons["Red Sun"]
-        let lighthouse = app.buttons["Lighthouse"]
-        XCTAssertTrue(sun.waitForExistence(timeout: 5))
-        XCTAssertTrue(sun.isSelected, "the default icon starts selected")
-        XCTAssertFalse(lighthouse.isSelected)
+        let automatic = app.buttons["appIcon.automatic"]
+        let dark = app.buttons["appIcon.dark"]
+        XCTAssertTrue(automatic.waitForExistence(timeout: 5))
+        XCTAssertTrue(automatic.isSelected, "the default icon follows the iPhone theme")
+        XCTAssertFalse(dark.isSelected)
 
-        lighthouse.tap()
+        dark.tap()
         // iOS confirms an icon change with a system alert.
         let alert = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
         if alert.waitForExistence(timeout: 5) { alert.buttons.firstMatch.tap() }
 
-        XCTAssertTrue(lighthouse.waitForExistence(timeout: 5))
-        XCTAssertTrue(lighthouse.isSelected)
-        XCTAssertFalse(sun.isSelected)
+        XCTAssertTrue(dark.waitForExistence(timeout: 5))
+        XCTAssertTrue(dark.isSelected)
+        XCTAssertFalse(automatic.isSelected)
         let shot = XCTAttachment(screenshot: app.screenshot())
         shot.lifetime = .keepAlways
         add(shot)
 
         // Put the default back so the simulator isn't left with a changed icon.
-        sun.tap()
+        automatic.tap()
         if alert.waitForExistence(timeout: 5) { alert.buttons.firstMatch.tap() }
     }
 }

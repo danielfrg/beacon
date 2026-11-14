@@ -43,6 +43,11 @@ struct SettingsView: View {
                     }
                 }
 
+                Section {
+                    NavigationLink("Manage Cameras") { ManageCamerasView() }
+                        .disabled(model.cameras.isEmpty)
+                }
+
                 Section("Appearance") {
                     Picker("Appearance", selection: $appearance) {
                         ForEach(Appearance.allCases) { Text($0.title).tag($0.rawValue) }
@@ -63,7 +68,12 @@ struct SettingsView: View {
                                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                                         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
                                             .strokeBorder(.primary.opacity(0.12)))
-                                    Text(choice.title).foregroundStyle(.primary)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(choice.title).foregroundStyle(.primary)
+                                        if let subtitle = choice.subtitle {
+                                            Text(subtitle).font(.footnote).foregroundStyle(.secondary)
+                                        }
+                                    }
                                     Spacer()
                                     if appIcon == choice {
                                         Image(systemName: "checkmark").foregroundStyle(.tint)
@@ -72,6 +82,9 @@ struct SettingsView: View {
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
+                            .accessibilityIdentifier("appIcon.\(choice.rawValue)")
+                            .accessibilityLabel(choice.title)
+                            .accessibilityHint(choice.subtitle ?? "")
                             .accessibilityAddTraits(appIcon == choice ? .isSelected : [])
                         }
                     } header: {
@@ -79,11 +92,6 @@ struct SettingsView: View {
                     } footer: {
                         if let iconError { Text(iconError).foregroundStyle(Color.red) }
                     }
-                }
-
-                Section {
-                    NavigationLink("Manage Cameras") { ManageCamerasView() }
-                        .disabled(model.cameras.isEmpty)
                 }
             }
             .navigationTitle("Settings")

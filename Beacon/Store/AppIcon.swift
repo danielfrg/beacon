@@ -1,43 +1,47 @@
 import UIKit
 
-/// The home-screen icons the user can pick from. The first is the default `AppIcon`;
-/// the rest are alternate icons declared in `project.yml`. Each one ships a light and a
-/// dark variant, so iOS picks the right one from the device appearance.
+/// The home-screen icon the user can pick. Automatic is the primary `AppIcon`, which ships a
+/// light and a dark variant so iOS follows the device theme. Light and Dark are alternate icons
+/// declared in `project.yml` that stay fixed whatever the device theme is.
 enum AppIconChoice: String, CaseIterable, Identifiable {
-    case sun, lighthouse, lighthouseBird
+    case automatic, light, dark
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .sun: "Red Sun"
-        case .lighthouse: "Lighthouse"
-        case .lighthouseBird: "Lighthouse and Bird"
+        case .automatic: "Automatic"
+        case .light: "Light"
+        case .dark: "Dark"
         }
+    }
+
+    var subtitle: String? {
+        self == .automatic ? "Matches your iPhone" : nil
     }
 
     /// Name passed to `setAlternateIconName`; nil means the primary icon.
     var alternateName: String? {
         switch self {
-        case .sun: nil
-        case .lighthouse: "AppIconLighthouse"
-        case .lighthouseBird: "AppIconLighthouseBird"
+        case .automatic: nil
+        case .light: "AppIconLight"
+        case .dark: "AppIconDark"
         }
     }
 
     /// Image set used to show the icon in Settings (app icon sets can't be loaded as images).
     var previewName: String {
         switch self {
-        case .sun: "IconSun"
-        case .lighthouse: "IconLighthouse"
-        case .lighthouseBird: "IconLighthouseBird"
+        case .automatic: "IconAuto"
+        case .light: "IconLight"
+        case .dark: "IconDark"
         }
     }
 
     /// The icon currently set on the device.
     @MainActor static var current: AppIconChoice {
         let name = UIApplication.shared.alternateIconName
-        return allCases.first { $0.alternateName == name } ?? .sun
+        return allCases.first { $0.alternateName == name } ?? .automatic
     }
 
     @MainActor static var isSupported: Bool { UIApplication.shared.supportsAlternateIcons }

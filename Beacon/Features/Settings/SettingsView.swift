@@ -15,7 +15,7 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("192.0.2.10:5000", text: $address)
+                    TextField("https://frigate.example.com", text: $address)
                         .keyboardType(.URL)
                         .textContentType(.URL)
                         .textInputAutocapitalization(.never)
@@ -37,7 +37,7 @@ struct SettingsView: View {
                     if let message {
                         Text(message.text).foregroundStyle(message.isError ? Color.red : Color.green)
                     } else {
-                        Text("The address of your Frigate server, for example 192.0.2.10:5000.")
+                        Text("The address of your Frigate server, for example https://frigate.example.com.")
                     }
                 }
 

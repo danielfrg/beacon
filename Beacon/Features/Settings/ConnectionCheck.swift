@@ -10,7 +10,7 @@ enum ConnectionResult: Equatable {
 func checkConnection(_ input: String, session: URLSession = .shared) async -> ConnectionResult {
     if input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return .invalid }
     guard let url = FrigateAPI.normalize(input) else {
-        return .failed("That doesn't look like a valid address. Use something like 192.0.2.10:5000.")
+        return .failed("That doesn't look like a valid address. Use something like https://frigate.example.com.")
     }
     do {
         let cameras = try await FrigateAPI(baseURL: url, session: session).fetchCameras()

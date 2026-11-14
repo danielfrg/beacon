@@ -8,7 +8,7 @@ struct CameraListView: View {
 
     var body: some View {
         content
-            .navigationTitle("Cameras")
+            .toolbarTitleDisplayMode(.inline) // no title: the cameras speak for themselves
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { showSettings = true } label: { Label("Settings", systemImage: "gearshape") }

@@ -8,6 +8,7 @@ struct SettingsView: View {
     @AppStorage(Appearance.storageKey) private var appearance = Appearance.default.rawValue
     @State private var address = ""
     @State private var checking = false
+    @State private var loadedAddress = false
     @State private var message: (text: String, isError: Bool)?
 
     var body: some View {
@@ -55,11 +56,17 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
-            .onAppear { address = settings.baseURL?.absoluteString ?? "" }
+            .onAppear {
+                // Only the first time: coming back from a pushed screen must not discard unsaved typing.
+                guard !loadedAddress else { return }
+                loadedAddress = true
+                address = settings.baseURL?.absoluteString ?? ""
+            }
         }
     }
 
     private func save() async {
+        guard !checking else { return } // Return key and Save button can race
         checking = true
         message = nil
         defer { checking = false }

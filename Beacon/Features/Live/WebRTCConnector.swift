@@ -21,8 +21,12 @@ final class WebRTCConnector: NSObject, LiveConnector, @unchecked Sendable {
     private static let factory = RTCPeerConnectionFactory()
     private static let log = Logger(subsystem: "com.example.Beacon", category: "live")
 
-    /// Called on the main actor when the remote video track arrives.
-    var onVideoTrack: (@MainActor (RTCVideoTrack) -> Void)?
+    /// Called on the main actor when the remote video track arrives. Set from the main thread,
+    /// read from WebRTC's threads, so access goes through the lock.
+    var onVideoTrack: (@MainActor (RTCVideoTrack) -> Void)? {
+        get { lock.withLock { trackHandler } }
+        set { lock.withLock { trackHandler = newValue } }
+    }
 
     private let signalingURL: URL
     private let lock = NSLock()
@@ -34,6 +38,7 @@ final class WebRTCConnector: NSObject, LiveConnector, @unchecked Sendable {
     /// Bumped by every connect() and disconnect(); lets a stale attempt notice it was superseded.
     private var generation = 0
     private var failureHandler: (@Sendable (String) -> Void)?
+    private var trackHandler: (@MainActor (RTCVideoTrack) -> Void)?
 
     init(signalingURL: URL) {
         self.signalingURL = signalingURL
@@ -65,7 +70,8 @@ final class WebRTCConnector: NSObject, LiveConnector, @unchecked Sendable {
         }
         socket.resume()
         Self.log.info("signaling socket opened")
-        receiveTask = Task { [weak self] in await self?.receiveLoop(socket: socket, peer: peer) }
+        let loop = Task<Void, Never> { [weak self] in await self?.receiveLoop(socket: socket, peer: peer) }
+        lock.withLock { receiveTask = loop }
 
         let offerConstraints = RTCMediaConstraints(
             mandatoryConstraints: ["OfferToReceiveVideo": "true", "OfferToReceiveAudio": "false"],

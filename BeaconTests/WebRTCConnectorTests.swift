@@ -20,4 +20,17 @@ final class WebRTCConnectorTests: XCTestCase {
         try await Task.sleep(nanoseconds: 100_000_000)
         XCTAssertFalse(delivered)
     }
+
+    /// Callbacks are registered on the main thread but read on WebRTC's threads; run under Thread Sanitizer
+    /// (`-enableThreadSanitizer YES`) this fails if the property isn't synchronized.
+    func testCallbackRegistrationIsThreadSafe() {
+        let connector = WebRTCConnector(signalingURL: URL(string: "ws://example.com:5000/live/webrtc/api/ws?src=x")!)
+        DispatchQueue.concurrentPerform(iterations: 2000) { i in
+            let handler: (@MainActor (RTCVideoTrack) -> Void)?
+            if i.isMultiple(of: 2) { handler = { _ in } } else { handler = nil }
+            connector.onVideoTrack = handler
+            _ = connector.onVideoTrack
+            connector.setFailureHandler { _ in }
+        }
+    }
 }

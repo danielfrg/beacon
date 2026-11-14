@@ -3,34 +3,55 @@ import XCTest
 
 private final class FakeConnector: LiveConnector, @unchecked Sendable {
     enum Behavior { case succeed, fail, hang, stubborn }
-    var behavior: Behavior
-    var disconnects = 0
-    var cancelled = false
-    var connects = 0
-    var failureHandler: (@Sendable (String) -> Void)?
+
+    private let lock = NSLock()
+    private var _behavior: Behavior
+    private var _disconnects = 0
+    private var _cancelled = false
+    private var _connects = 0
+    private var _failureHandler: (@Sendable (String) -> Void)?
     private var stuck: CheckedContinuation<Void, Error>?
 
-    init(_ behavior: Behavior) { self.behavior = behavior }
+    var behavior: Behavior {
+        get { lock.withLock { _behavior } }
+        set { lock.withLock { _behavior = newValue } }
+    }
+    var disconnects: Int { lock.withLock { _disconnects } }
+    var cancelled: Bool { lock.withLock { _cancelled } }
+    var connects: Int { lock.withLock { _connects } }
+    var failureHandler: (@Sendable (String) -> Void)? { lock.withLock { _failureHandler } }
 
-    func setFailureHandler(_ handler: @escaping @Sendable (String) -> Void) { failureHandler = handler }
+    init(_ behavior: Behavior) { _behavior = behavior }
+
+    func setFailureHandler(_ handler: @escaping @Sendable (String) -> Void) {
+        lock.withLock { _failureHandler = handler }
+    }
 
     func connect() async throws {
-        connects += 1
-        switch behavior {
+        let current = lock.withLock { () -> Behavior in _connects += 1; return _behavior }
+        switch current {
         case .succeed: return
         case .fail: throw FrigateError.unreachable
         case .stubborn:
             // Like the bridged WebRTC callbacks: ignores Task cancellation, only disconnect() frees it.
-            try await withCheckedThrowingContinuation { (c: CheckedContinuation<Void, Error>) in stuck = c }
+            try await withCheckedThrowingContinuation { (c: CheckedContinuation<Void, Error>) in
+                lock.withLock { stuck = c }
+            }
         case .hang:
-            do { try await Task.sleep(nanoseconds: 60_000_000_000) } catch { cancelled = true; throw error }
+            do { try await Task.sleep(nanoseconds: 60_000_000_000) } catch {
+                lock.withLock { _cancelled = true }
+                throw error
+            }
         }
     }
 
     func disconnect() {
-        disconnects += 1
-        stuck?.resume(throwing: CancellationError())
-        stuck = nil
+        let waiting = lock.withLock { () -> CheckedContinuation<Void, Error>? in
+            _disconnects += 1
+            defer { stuck = nil }
+            return stuck
+        }
+        waiting?.resume(throwing: CancellationError())
     }
 }
 

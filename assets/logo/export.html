@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Beacon Icon Export</title>
+    <style>
+      html, body { margin: 0; padding: 0; overflow: hidden; background: #000; }
+      canvas { display: block; }
+    </style>
+  </head>
+  <body>
+    <!-- One icon per page load, sized to the window. Used by scripts/export.mjs:
+         /export.html?theme=light|dark|auto&size=1024&colourway=coral -->
+    <canvas id="icon"></canvas>
+    <script type="module" src="/src/export.js"></script>
+  </body>
+</html>

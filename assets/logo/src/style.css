@@ -1,0 +1,38 @@
+:root {
+  --bg: #f7f4ef; --surface: #ffffff; --line: #e8e1d6; --fg: #1d1b18; --muted: #7a7266; --accent: #e8483d;
+  --display: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
+  --body: "Inter", system-ui, -apple-system, sans-serif;
+  --mono: "Space Mono", ui-monospace, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0e0f13; --surface: #17191f; --line: #272a33; --fg: #f1eee8; --muted: #9a958c; --accent: #ff6a5e; color-scheme: dark; }
+}
+
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--body); line-height: 1.5; }
+.wrap { max-width: 1000px; margin: 0 auto; padding: 40px 16px 72px; display: grid; gap: 36px; }
+header { display: grid; gap: 10px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(34px, 6vw, 56px); letter-spacing: -0.03em; line-height: 1; margin: 0; }
+h2 { font-family: var(--display); font-weight: 700; font-size: 22px; margin: 0; }
+p { margin: 0; }
+.lede { color: var(--muted); max-width: 62ch; font-size: 16px; }
+
+.hero { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.hero figure { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 28px; padding: 28px 20px 18px; display: grid; justify-items: center; gap: 14px; }
+.hero-icon { width: 100%; max-width: 340px; aspect-ratio: 1; height: auto; }
+figcaption { font-family: var(--mono); font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 18px; display: grid; gap: 12px; }
+.card h3 { margin: 0; font-family: var(--display); font-size: 17px; font-weight: 700; }
+.card .note { font-size: 13px; color: var(--muted); }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pair canvas { width: 100%; aspect-ratio: 1; height: auto; }
+.homes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.home { display: flex; gap: 10px; justify-content: center; align-items: center; padding: 8px; border-radius: 12px; }
+.home.light { background: #d9dde2; }
+.home.dark { background: #1a1d26; }
+
+@media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .hero { grid-template-columns: 1fr; } }

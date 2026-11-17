@@ -5,6 +5,10 @@ struct CameraListView: View {
     @Environment(CamerasModel.self) private var model
     @State private var showSettings = false
     @State private var detailCamera: Camera?
+    @State private var width: CGFloat = 0
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    private var grid: GridLayout { GridLayout(isRegular: sizeClass == .regular, width: width) }
 
     var body: some View {
         content
@@ -68,7 +72,8 @@ struct CameraListView: View {
                             .padding(.horizontal, 16)
                             .accessibilityLabel("Couldn't refresh. \(error)")
                     }
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 16)], spacing: 16) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: grid.spacing), count: grid.columns),
+                              spacing: grid.spacing) {
                         ForEach(model.visible) { camera in
                             NavigationLink(value: camera) { CameraCard(camera: camera, api: api) }
                                 .buttonStyle(.plain)
@@ -79,9 +84,10 @@ struct CameraListView: View {
                                 }
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
+                    .padding(.horizontal, grid.spacing)
+                    .padding(.bottom, grid.spacing)
                 }
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
             }
         }
     }

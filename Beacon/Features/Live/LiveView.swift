@@ -101,6 +101,7 @@ struct LiveView: View {
         .padding()
         .frame(maxWidth: .infinity)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .frame(maxWidth: 520) // stays a card on iPad instead of spanning the screen
         .padding()
     }
 

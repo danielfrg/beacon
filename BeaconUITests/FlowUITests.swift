@@ -31,7 +31,7 @@ final class FlowUITests: XCTestCase {
         snap("manage")
         app.buttons["Hide driveway"].tap()
         XCTAssertTrue(app.buttons["Show driveway"].exists)
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.navigationBars["Manage Cameras"].buttons.element(boundBy: 0).tap()
         app.buttons["Done"].tap()
         XCTAssertFalse(card("driveway").waitForExistence(timeout: 2))
         snap("list-hidden")
@@ -39,7 +39,7 @@ final class FlowUITests: XCTestCase {
         app.buttons["Settings"].tap()
         app.buttons["Manage Cameras"].tap()
         app.buttons["Show driveway"].tap()
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.navigationBars["Manage Cameras"].buttons.element(boundBy: 0).tap()
         app.buttons["Done"].tap()
         XCTAssertTrue(card("driveway").waitForExistence(timeout: 5))
     }
@@ -93,7 +93,7 @@ final class FlowUITests: XCTestCase {
         let typed = field.value as? String ?? ""
         XCTAssertTrue(typed.hasSuffix("x"))
         app.buttons["Manage Cameras"].tap()
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.navigationBars["Manage Cameras"].buttons.element(boundBy: 0).tap()
         XCTAssertEqual(app.textFields.firstMatch.value as? String, typed, "unsaved text must survive")
     }
 }

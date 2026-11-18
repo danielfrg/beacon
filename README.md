@@ -70,3 +70,7 @@ The first time you connect, iOS asks for local network access; allow it.
    ```
 
 The first launch asks you to trust the developer app (Settings → General → VPN & Device Management) and to allow local network access.
+
+## Releasing
+
+See [RELEASING.md](RELEASING.md) for TestFlight and App Store uploads (`scripts/release.sh`).
